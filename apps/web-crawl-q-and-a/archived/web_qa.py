@@ -1,27 +1,36 @@
+"""Main python module for the web crawl q and a app."""
 ################################################################################
-### Step 1
+### Step 1 
 ################################################################################
 
-import requests
 import re
 import urllib.request
-from bs4 import BeautifulSoup
 from collections import deque
 from html.parser import HTMLParser
 from urllib.parse import urlparse
+from dotenv import load_dotenv
 import os
+from bs4 import BeautifulSoup
+
+
+import requests
 import pandas as pd
 import tiktoken
 import openai
 import numpy as np
 from openai.embeddings_utils import distances_from_embeddings, cosine_similarity
 
+# Load the environment variables
+load_dotenv()
+#Get the API key from the environment variable
+openai.api_key = os.environ["OPENAI_API_KEY"]
+
 # Regex pattern to match a URL
 HTTP_URL_PATTERN = r'^http[s]{0,1}://.+$'
 
 # Define root domain to crawl
-domain = "openai.com"
-full_url = "https://openai.com/"
+domain = "paradiser.at"
+full_url = "https://paradiser.at/"
 
 # Create a class to parse the HTML and get the hyperlinks
 class HyperlinkParser(HTMLParser):
@@ -308,9 +317,7 @@ df.head()
 ### Step 12
 ################################################################################
 
-def create_context(
-    question, df, max_len=1800, size="ada"
-):
+def create_context(question, df, max_len=1800, size="ada"):
     """
     Create a context for a question by finding the most similar context from the dataframe
     """
@@ -343,7 +350,7 @@ def create_context(
 
 def answer_question(
     df,
-    model="text-davinci-003",
+    model="gpt-4",
     question="Am I allowed to publish model outputs to Twitter, without a human review?",
     max_len=1800,
     size="ada",
@@ -367,8 +374,13 @@ def answer_question(
 
     try:
         # Create a completions using the questin and context
-        response = openai.Completion.create(
-            prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: {question}\nAnswer:",
+        response = openai.ChatCompletion.create(
+            #prompt=f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\nContext: {context}\n\n---\n\nQuestion: What is ParadiseR?\nAnswer:ParadiseR is a cooking service that provides customers with meal kits containing all the necessary ingredients to prepare gourmet meals at home. The ingredients are washed, cut, and packaged, and the meal kits are delivered to the customer's doorstep in a CO2-neutral manner. The meal kits come with simple cooking instructions, and there are various dishes to choose from, including classic, exotic, vegetarian, and meat dishes. ParadiseR also offers a subscription service where customers can receive weekly deliveries and pause or cancel the subscription at any time.\n\nQuestion: {question}\nAnswer:",
+            messages=[{"role": "system", "content": f"Answer the question based on the context below, and if the question can't be answered based on the context, say \"I don't know\"\n\n"},
+                      {"role": "system", "content": f"Context: {context}"},
+                      {"role": "assistant", "content": "Hi, how are you doing today? What can I help you with?"},
+                      {"role": "user", "content": f"Question: {question}"}
+            ],
             temperature=0,
             max_tokens=max_tokens,
             top_p=1,
@@ -377,7 +389,7 @@ def answer_question(
             stop=stop_sequence,
             model=model,
         )
-        return response["choices"][0]["text"].strip()
+        return response#["choices"][0]["text"].strip()
     except Exception as e:
         print(e)
         return ""
@@ -386,6 +398,10 @@ def answer_question(
 ### Step 13
 ################################################################################
 
-print(answer_question(df, question="What day is it?", debug=False))
+print(answer_question(df, question="What is the integral of x^2?"))
 
-print(answer_question(df, question="What is our newest embeddings model?"))
+print(answer_question(df, question="Was sind die ParadiseR Abos?"))
+
+print(answer_question(df, question="What is ParadiseR?"))
+
+print(answer_question(df, question="What meals does ParadiseR sell?"))
